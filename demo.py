@@ -79,7 +79,7 @@ if args.scribble:
     mask_inds = np.delete(mask_inds, np.argwhere(mask_inds == 255))
     inds_sim = torch.from_numpy(np.where(mask == 255)[0])
     inds_scr = torch.from_numpy(np.where(mask != 255)[0])
-    target_scr = torch.from_numpy(mask.astype(np.int))
+    target_scr = torch.from_numpy(mask.astype(np.int64))
     if use_cuda:
         inds_sim = inds_sim.cuda()
         inds_scr = inds_scr.cuda()
@@ -101,8 +101,8 @@ loss_fn = torch.nn.CrossEntropyLoss()
 loss_fn_scr = torch.nn.CrossEntropyLoss()
 
 # continuity loss definition
-loss_hpy = torch.nn.L1Loss(size_average=True)
-loss_hpz = torch.nn.L1Loss(size_average=True)
+loss_hpy = torch.nn.L1Loss()
+loss_hpz = torch.nn.L1Loss()
 
 HPy_target = torch.zeros(im.shape[0] - 1, im.shape[1], args.nChannel)
 HPz_target = torch.zeros(im.shape[0], im.shape[1] - 1, args.nChannel)
@@ -136,8 +136,11 @@ for batch_idx in range(args.maxIter):
 
     # loss 
     if args.scribble:
-        loss = args.stepsize_sim * loss_fn(output[inds_sim], target[inds_sim]) + args.stepsize_scr * loss_fn_scr(
-            output[inds_scr], target_scr[inds_scr]) + args.stepsize_con * (lhpy + lhpz)
+        a = loss_fn(output[inds_sim], target[inds_sim])
+        b2 = output[inds_scr]
+        b3 = target_scr[inds_scr]
+        b = loss_fn_scr(b2, b3)
+        loss = args.stepsize_sim * a + args.stepsize_scr * b + args.stepsize_con * (lhpy + lhpz)
     else:
         loss = args.stepsize_sim * loss_fn(output, target) + args.stepsize_con * (lhpy + lhpz)
 
